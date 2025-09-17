@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laravel Chat Application - Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .chat-messages {
+            height: 450px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .message.own {
+            margin-left: 20%;
+            background-color: #007bff;
+            color: white;
+        }
+        .message-header {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        .sidebar {
+            height: 600px;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+        .room-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .room-item:hover {
+            background-color: #f8f9fa;
+            color: inherit;
+            text-decoration: none;
+        }
+        .room-item.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .online-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .online {
+            background-color: #28a745;
+        }
+        .offline {
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-comments"></i> Laravel Chat
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> Admin
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Chat Rooms</h5>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newRoomModal">
+                            <i class="fas fa-plus"></i> New Room
+                        </button>
+                    </div>
+                    <div class="card-body p-0 sidebar">
+                        <a href="#" class="room-item active" onclick="loadRoom('General Chat')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>General Chat</strong>
+                                    <div class="text-muted small">Welcome to the chat room!</div>
+                                </div>
+                                <i class="fas fa-users text-muted"></i>
+                            </div>
+                        </a>
+                        <a href="#" class="room-item" onclick="loadRoom('Tech Discussion')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Tech Discussion</strong>
+                                    <div class="text-muted small">Let's talk about technology</div>
+                                </div>
+                                <i class="fas fa-users text-muted"></i>
+                            </div>
+                        </a>
+                        <a href="#" class="room-item" onclick="loadRoom('Random Chat')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Random Chat</strong>
+                                    <div class="text-muted small">Random discussions</div>
+                                </div>
+                                <i class="fas fa-users text-muted"></i>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card chat-container">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0" id="roomTitle">General Chat</h5>
+                            <small class="text-muted">Welcome to the chat room!</small>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="connectWebSocket()">
+                                <i class="fas fa-wifi"></i> Connect WS
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="showUsers()">
+                                <i class="fas fa-users"></i> Users
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message">
+                            <div class="message-header">
+                                <strong>System</strong>
+                                <span class="text-muted">now</span>
+                            </div>
+                            <div class="message-content">Welcome to Laravel Chat! This is a demo of a real-time chat application built with Laravel and WebSockets.</div>
+                        </div>
+                        <div class="message">
+                            <div class="message-header">
+                                <strong>Admin</strong>
+                                <span class="text-muted">now</span>
+                            </div>
+                            <div class="message-content">Hello everyone! This chat application supports real-time messaging, multiple rooms, user authentication, and more!</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <form id="messageForm" class="d-flex" onsubmit="sendMessage(event)">
+                            <input type="text" class="form-control me-2" id="messageInput" 
+                                   placeholder="Type your message..." autocomplete="off" required>
+                            <button type="submit" class="btn btn-primary" id="sendButton">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Room Modal -->
+    <div class="modal fade" id="newRoomModal" tabindex="-1" aria-labelledby="newRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newRoomModalLabel">Create New Room</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="roomName" class="form-label">Room Name</label>
+                        <input type="text" class="form-control" id="roomName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roomDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="roomDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="isPrivate">
+                        <label class="form-check-label" for="isPrivate">
+                            Private Room
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createRoom()">Create Room</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Modal -->
+    <div class="modal fade" id="usersModal" tabindex="-1" aria-labelledby="usersModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="usersModalLabel">Online Users</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <span class="online-status online"></span>
+                        <strong>Admin</strong> <i class="fas fa-crown text-warning" title="Administrator"></i>
+                    </div>
+                    <div class="mb-2">
+                        <span class="online-status online"></span>
+                        John Doe
+                    </div>
+                    <div class="mb-2">
+                        <span class="online-status online"></span>
+                        Jane Smith
+                    </div>
+                    <div class="mb-2">
+                        <span class="online-status offline"></span>
+                        Bob Wilson <small class="text-muted">(offline)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let websocket = null;
+        let currentRoom = 'General Chat';
+        let userName = 'Admin';
+
+        function scrollToBottom() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addMessage(content, sender = userName, isOwn = true) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOwn ? 'own' : ''}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong>${sender}</strong>
+                    <span class="text-muted">${timeString}</span>
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function sendMessage(event) {
+            event.preventDefault();
+            
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            addMessage(message, userName, true);
+            messageInput.value = '';
+            
+            // Simulate sending message via WebSocket
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'message',
+                    content: message,
+                    room: currentRoom,
+                    user: userName
+                }));
+            }
+            
+            // Simulate receiving a response (for demo purposes)
+            setTimeout(() => {
+                const responses = [
+                    "That's interesting!",
+                    "I agree with you.",
+                    "Tell me more about that.",
+                    "Great point!",
+                    "Thanks for sharing!",
+                    "I have a different perspective on that.",
+                    "Could you elaborate?"
+                ];
+                const randomUser = ['John Doe', 'Jane Smith', 'Bob Wilson'][Math.floor(Math.random() * 3)];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addMessage(randomResponse, randomUser, false);
+            }, 1000 + Math.random() * 3000);
+        }
+
+        function loadRoom(roomName) {
+            currentRoom = roomName;
+            document.getElementById('roomTitle').textContent = roomName;
+            
+            // Update active room in sidebar
+            document.querySelectorAll('.room-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.room-item').classList.add('active');
+            
+            // Clear messages and add welcome message
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="message">
+                    <div class="message-header">
+                        <strong>System</strong>
+                        <span class="text-muted">now</span>
+                    </div>
+                    <div class="message-content">Welcome to ${roomName}! Start chatting with other users.</div>
+                </div>
+            `;
+        }
+
+        function createRoom() {
+            const roomName = document.getElementById('roomName').value.trim();
+            const description = document.getElementById('roomDescription').value.trim();
+            const isPrivate = document.getElementById('isPrivate').checked;
+            
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
+            }
+            
+            // Add new room to sidebar (simulation)
+            const sidebar = document.querySelector('.sidebar');
+            const newRoomItem = document.createElement('a');
+            newRoomItem.href = '#';
+            newRoomItem.className = 'room-item';
+            newRoomItem.onclick = () => loadRoom(roomName);
+            newRoomItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${roomName}</strong>
+                        <div class="text-muted small">${description || 'New room created'}</div>
+                    </div>
+                    ${isPrivate ? '<i class="fas fa-lock text-muted"></i>' : '<i class="fas fa-users text-muted"></i>'}
+                </div>
+            `;
+            
+            sidebar.appendChild(newRoomItem);
+            
+            // Close modal and clear form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newRoomModal'));
+            modal.hide();
+            
+            document.getElementById('roomName').value = '';
+            document.getElementById('roomDescription').value = '';
+            document.getElementById('isPrivate').checked = false;
+            
+            // Load the new room
+            setTimeout(() => {
+                newRoomItem.click();
+            }, 100);
+        }
+
+        function connectWebSocket() {
+            // Simulate WebSocket connection (for demo purposes)
+            if (websocket) {
+                websocket.close();
+            }
+            
+            // In a real implementation, this would connect to a WebSocket server
+            // websocket = new WebSocket('ws://localhost:6001/app/local?protocol=7&client=js&version=4.2.2&flash=false');
+            
+            // Simulate connection
+            addMessage('WebSocket connection established! Real-time messaging is now active.', 'System', false);
+            
+            // Simulate WebSocket object
+            websocket = {
+                readyState: 1, // OPEN
+                send: function(data) {
+                    console.log('Sending:', data);
+                },
+                close: function() {
+                    console.log('WebSocket closed');
+                }
+            };
+        }
+
+        function showUsers() {
+            const usersModal = new bootstrap.Modal(document.getElementById('usersModal'));
+            usersModal.show();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollToBottom();
+            document.getElementById('messageInput').focus();
+            
+            // Auto-scroll on page load
+            setTimeout(scrollToBottom, 100);
+        });
+
+        // Enter key to send message
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage(e);
+            }
+        });
+    </script>
+</body>
+</html>
